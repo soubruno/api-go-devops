@@ -53,7 +53,7 @@ func TestUserService(t *testing.T) {
 	mockRepo := &MockUserRepository{}
 	service := NewUserService(mockRepo)
 
-	// Teste Create
+	// Teste CreateUser
 	user, err := service.CreateUser(User{Name: "Teste", Email: "teste@example.com"})
 	if err != nil {
 		t.Fatalf("esperava sucesso ao criar usuario, erro: %v", err)
@@ -62,14 +62,14 @@ func TestUserService(t *testing.T) {
 		t.Errorf("esperava ID 1, obteve %d", user.ID)
 	}
 
-	// Teste GetByID
-	found, err := service.GetUserByID(1)
+	// Teste GetUser
+	found, err := service.GetUser(1)
 	if err != nil || found.Name != "Teste" {
 		t.Fatalf("falha ao buscar usuario por ID")
 	}
 
-	// Teste GetAll
-	all, err := service.GetAllUsers()
+	// Teste ListUsers
+	all, err := service.ListUsers()
 	if err != nil || len(all) != 1 {
 		t.Fatalf("esperava 1 usuario retornado")
 	}
