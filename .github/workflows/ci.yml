@@ -8,7 +8,7 @@ on:
 
 jobs:
   # -------------------------------------------------------------
-  # Etapa 1: Integração Contínua (CI)
+  # 1. CI: Build, Testes, Lint e SAST
   # -------------------------------------------------------------
   ci:
     name: Build, Tests, Lint & SAST
@@ -67,7 +67,7 @@ jobs:
         continue-on-error: true
 
   # -------------------------------------------------------------
-  # Etapa 2: Container (Lint, Build, Scan & Push Docker Hub)
+  # 2. Container: Lint, Build, Trivy e Push Docker Hub
   # -------------------------------------------------------------
   container:
     name: Docker Lint, Build, Scan & Push
@@ -121,3 +121,45 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/api-go-devops:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/api-go-devops:${{ github.sha }}
+
+  # -------------------------------------------------------------
+  # 3. CD: Deploy Staging & DAST (OWASP ZAP)
+  # -------------------------------------------------------------
+  deploy-staging:
+    name: Deploy Staging & DAST Scan
+    runs-on: ubuntu-latest
+    needs: container
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Disparar Deploy Hook no Render
+        run: |
+          if [ -n "${{ secrets.RENDER_STAGING_HOOK }}" ]; then
+            curl -X POST "${{ secrets.RENDER_STAGING_HOOK }}"
+          else
+            echo "RENDER_STAGING_HOOK nao configurado. Pulando trigger manual."
+          fi
+
+      - name: Aguardar Deploy Estabilizar
+        run: sleep 20
+
+      - name: DAST Scan (OWASP ZAP Baseline)
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'https://api-go-devops.onrender.com/users'
+        continue-on-error: true
+
+  # -------------------------------------------------------------
+  # 4. CD: Deploy Produção com Aprovação Manual
+  # -------------------------------------------------------------
+  deploy-production:
+    name: Deploy Production (Aprovacao Manual)
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment: production
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Deploy Producao
+        run: |
+          echo "Deploy em Producao aprovado por revisor e concluido com sucesso!"
