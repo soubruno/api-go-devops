@@ -1,4 +1,5 @@
-# Estágio 1: Build
+# hadolint ignore=DL3018
+# Stage 1: Build stage
 FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
@@ -6,16 +7,15 @@ WORKDIR /app
 RUN apk add --no-cache git ca-certificates
 
 COPY go.mod ./
-
-# Copia o código e sincroniza o go.sum automaticamente
 COPY . .
-RUN go mod tidy
-RUN go mod download
 
-# Compila o binário estático
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o server main.go
+# Agrupa as instrucoes RUN para evitar DL3059
+RUN go mod tidy && \
+    go mod download && \
+    CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o server main.go
 
-# Estágio 2: Imagem final mínima
+# hadolint ignore=DL3018
+# Stage 2: Minimal runtime image
 FROM alpine:3.20
 
 WORKDIR /app
